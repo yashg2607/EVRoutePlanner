@@ -13,7 +13,7 @@ Details for later additions to the class to be explained soon!!
 
 '''
 
-class EVRoutePlanner:
+class EVRoutePlanning_ValueIteration:
     def __init__(
         self,
         X: int = 10,
@@ -315,102 +315,4 @@ class EVRoutePlanner:
 
         return x_route, y_route
 
-# Testing the environment
-m = EVRoutePlanner(X=25, Y=25, grid_length=10, num_chargers=15)
-
-# Plot the map with the location of all charging stations
-fig, ax = plt.subplots(figsize=(6, 6))
-
-ax.imshow(m.map, cmap = 'binary')
-ax.invert_yaxis()
-ax.set_title('Location of Charging Stations', fontsize = 15)
-ax.set_xlabel('X', fontsize = 13)
-ax.set_ylabel('Y', fontsize = 13)
-fig.tight_layout()
-fig.show()
-
-# Generate the wait time distribution with hour for each charging station
-m.generate_wait_time_distribution_per_charger(prob_peak_hour=[1/24] * 24 , list_sd_hours=[3,4], list_peak_wait_time=[20,25,30], prob_peak_wait_time=[0.3,0.4,0.3])
-
-# Sample an origin-destination pair
-o, d = np.random.choice(np.arange(m.X * m.Y), 2)
-date = datetime.fromisoformat("2020-03-01-09")
-
-m.create_journey(origin=o, destination=d, start_time=date, start_soc=0.8, desired_soc=0.5, vehicle_range=180)
-
-# Initialize the position rewards based on origin-destination
-m.initialize_position_rewards(0.1, 2)
-
-# Plot the position rewards for each location
-# Test out various hyperparameter choices and how they influence the position rewards
-fig, ax1 = plt.subplots(figsize=(6, 6))
-
-pos = ax1.imshow(m.position_reward.T)
-ax1.invert_yaxis()
-ax1.set_title('Position Rewards for each Location', fontsize = 15)
-ax1.set_xlabel('X', fontsize = 13)
-ax1.set_ylabel('Y', fontsize = 13)
-fig.tight_layout()
-fig.colorbar(pos, ax=ax1, shrink=0.9)
-fig.show()
-
-# Get the optimal policy/route using value iteration approach
-policy = m.value_iteration(num_iterations=5, discount_factor=0.9)
-
-# Plot the route
-fig, ax1 = plt.subplots(figsize=(6, 6))
-
-# Plot the route using actions
-ax1.plot(policy[0], policy[1])
-
-# Plot the origin
-o_x, o_y = np.unravel_index(o, m.map_shape)
-ax1.scatter(o_x, o_y, color = 'orange', label = 'Origin')
-
-# Plot the destination
-d_x, d_y = np.unravel_index(d, m.map_shape)
-ax1.scatter(d_x, d_y, color = 'red', label = 'Destination')
-
-# Plot the charging stations
-c_x, c_y = np.unravel_index(m.charging_stations, m.map_shape)
-ax1.scatter(c_x, c_y, color = 'black', label = 'Charging Station', marker = '*')
-
-ax1.set_title('Optimal Policy/Route', fontsize = 15)
-ax1.set_xlabel('X', fontsize = 13)
-ax1.set_ylabel('Y', fontsize = 13)
-ax1.legend()
-fig.tight_layout()
-fig.show()
-
-# Plot the value function for each location
-# Test out various hyperparameter choices and how they influence the position rewards
-fig, ax1 = plt.subplots(figsize=(6, 6))
-
-pos = ax1.imshow(m.value_function.T)
-ax1.invert_yaxis()
-ax1.set_title('Value Function for each Location', fontsize = 15)
-ax1.set_xlabel('X', fontsize = 13)
-ax1.set_ylabel('Y', fontsize = 13)
-fig.tight_layout()
-fig.colorbar(pos, ax=ax1, shrink=0.9)
-fig.show()
-
-# Sample plot for truncnorm distribution
-
-peak = 18 # enter any peak hour value from [0, 23] - if unaware, pls remember datatime stores hours from 0 to 23 :))
-rv = ss.truncnorm(-12/4, 11/4, peak, 4)
-prob = np.zeros(24)
-for i in range(-12, 12):
-    prob[(i + peak + 24) % 24] = rv.pdf(i + peak) / rv.pdf(peak) * 40
-
-fig, ax1 = plt.subplots(figsize=(6, 5))
-
-ax1.plot(np.arange(24), prob)
-ax1.set_title('Wait time Distribution (Peak wait time of 40 mins at 6 p.m.)', fontsize = 14)
-ax1.set_xlabel('Time of the day (in hours)', fontsize = 13)
-ax1.set_ylabel('Wait time (in minutes)', fontsize = 13)
-ax1.set_xlim([0,23])
-fig.show()
-
-
-
+# Please refer to the Jupyter Notebook file in the repo to understand how to use this class and all the functions within it.
