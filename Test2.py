@@ -36,7 +36,8 @@ class GridEnv(gym.Env):
         # self.destination = np.random.randint(self.grid_size, size=2)
         self.origin = np.array((2,0))
         self.destination = np.array((23,18))
-        self.chargers = np.array([(6,6),(9,8),(11,9),(16,13),(20,16)])
+        self.chargers = np.array([(6,6),(9,8),(11,9),(16,13),(20,16),(11,5),(13,7),(16,10)])
+        self.wait_time = np.array([20, 30, 40, 40, 60, 10, 10, 10])
         self.current_position = self.origin.copy()
         self.path = []
         self.path.append(self.current_position.copy())
@@ -65,9 +66,12 @@ class GridEnv(gym.Env):
 
         # max out the SOC if charger is encounterd and delete that charger from the list of chargers
         if np.any(np.all(self.chargers == self.current_position, axis=1)):
-            self.SOC = 100
-            mask = np.any(self.chargers != self.current_position.copy(), axis=1)
-            self.chargers = self.chargers[mask]
+            if self.SOC < 20:
+                self.SOC = 100
+                mask = np.any(self.chargers != self.current_position.copy(), axis=1)
+                self.chargers = self.chargers[mask]
+                index = np.where(np.all(self.chargers == self.current_position, axis=1))[0]
+                self.total_time = self.total_time - 1 + self.wait_time[index]
             # print("Chargers: ",self.chargers)
 
         # calculate the reward
@@ -116,7 +120,11 @@ class GridEnv(gym.Env):
         elif self.linearize_coord(self.current_position) in self.visited_states:
             return -10
         elif np.any(np.all(self.chargers == self.current_position, axis=1)):
-            return 20
+            if self.SOC < 20:
+                index = np.where(np.all(self.chargers == self.current_position, axis=1))[0]
+                return -self.wait_time[index]
+            else: 
+                return -1
         else:
             return -1
 
@@ -158,7 +166,7 @@ class SarsaLambda:
 
     def simulate(self, k):
         # Iteration over episodes
-        for i in tqdm(range(k)):
+        for i in range(k):
             episode_reward = 0.0
             s = self.env.reset()
             a = self.choose_greedy_action(s)
