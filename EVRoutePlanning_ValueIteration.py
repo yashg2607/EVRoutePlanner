@@ -179,12 +179,12 @@ class EVRoutePlanning_ValueIteration:
 
         return
 
-    def _transition_model(self, initial_state, action):
-        '''initial_state is in the form of (x_cur, y_cur, time_cur, soc_cur) and it returns 
+    def _transition_model(self, current_state, action):
+        '''current_state is in the form of (x_cur, y_cur, time_cur, soc_cur) and it returns 
         the final state reached by taking the given action. Remember that our action space 
         is [left, right, up, down] which is indexed as [0, 1, 2, 3]'''
 
-        x_cur, y_cur, time_cur, soc_cur = initial_state
+        x_cur, y_cur, time_cur, soc_cur = current_state
         time_fin = time_cur + timedelta(minutes = self.grid_length) # assuming average speed of 1 miles/min
         soc_fin = soc_cur - self.grid_length / self.vehicle_range # assuming constant discharge over range
         hit_the_wall = False # to record if we hit the wall by taking the given action
@@ -213,7 +213,7 @@ class EVRoutePlanning_ValueIteration:
         
         # Return initial state if you hit the wall as no state transition occurs!!
         if(hit_the_wall):
-            return initial_state, hit_the_wall
+            return current_state, hit_the_wall
 
         # Check if the final position is a charging station
         if(self.map[x_fin][y_fin] == 1):
@@ -258,7 +258,7 @@ class EVRoutePlanning_ValueIteration:
         '''Returns the best action to take for the current state after calculating the values 
         of action value function for each action'''
 
-        (x_cur, y_cur, time_cur, soc_cur) = current_state # extracting the variables associated with the current state
+        x_cur, y_cur, time_cur, soc_cur = current_state # extracting the variables associated with the current state
         if(initializing_value_function):
             current_reward = self.position_reward[x_cur][y_cur] # only position rewards if initializing value function
         else:
