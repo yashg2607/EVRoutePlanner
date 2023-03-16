@@ -3,17 +3,19 @@ from gym import spaces
 import numpy as np
 import cv2
 from tqdm import tqdm
+import random
 
 class GridEnv(gym.Env):
-    def __init__(self):
-        self.grid_size = 10
+    def __init__(self, grid_size, number_of_stations):
+        self.grid_size = grid_size
         self.action_space = spaces.Discrete(4)  # up, down, left, right
         self.observation_space = spaces.Box(low=0, high=255, shape=(self.grid_size, self.grid_size, 3),
                                             dtype=np.uint8)  # RGB image
+        # self.chargers = np.array(self._initialize_map_with_charging_stations(number_of_stations))
         # self.origin = np.random.randint(self.grid_size, size=2)
         # self.destination = np.random.randint(self.grid_size, size=2)
         self.origin = np.array((0, 0))
-        self.destination = np.array((5, 7))
+        self.destination = np.array((23, 18))
         self.grid_shape = self.observation_space.shape[0:2]
         self.path = []
         self.visited_states = []
@@ -32,9 +34,9 @@ class GridEnv(gym.Env):
     def reset(self):
         # self.origin = np.random.randint(self.grid_size, size=2)
         # self.destination = np.random.randint(self.grid_size, size=2)
-        self.origin = np.array((0,0))
-        self.destination = np.array((5,7))
-        self.chargers = np.array([(2,2),(4,6),(6,9)])
+        self.origin = np.array((2,0))
+        self.destination = np.array((23,18))
+        self.chargers = np.array([(6,6),(9,8),(11,9),(16,13),(20,16)])
         self.current_position = self.origin.copy()
         self.path = []
         self.path.append(self.current_position.copy())
@@ -99,6 +101,14 @@ class GridEnv(gym.Env):
 
         return img
     
+    def _initialize_map_with_charging_stations(self, number_of_stations):
+        coordinates = np.zeros((number_of_stations, 2), dtype=np.int32)
+        for i in range(number_of_stations):
+            x = random.randint(0, self.grid_size-1)
+            y = random.randint(0, self.grid_size-1)
+            coordinates[i, 0] = x
+            coordinates[i, 1] = y
+        return coordinates
 
     def _get_reward(self):
         if self.current_position[0] == self.destination[0] and self.current_position[1] == self.destination[1]:
@@ -109,18 +119,6 @@ class GridEnv(gym.Env):
             return 20
         else:
             return -1
-
-
-class EpsilonGreedyExploration:
-    def __init__(self, epsilon):
-        self.epsilon = epsilon
-
-    def __call__(self, A, s):
-        epsilon = self.epsilon
-        if np.random.rand() < epsilon:
-            return np.random.choice(A)
-        Q = lambda a: lookahead(s, a)
-        return np.argmax([Q(a) for a in A])
 
 
 
@@ -172,11 +170,11 @@ class SarsaLambda:
                 s = s_
                 a = a_
                 episode_reward += r
-            print(f"Episode {k + 1} completed with reward {episode_reward} and total time {total_time}")
+            print(f"Episode {i + 1} completed with reward {episode_reward} and total time {total_time}")
 
 
 def main():
-    env = GridEnv()
+    env = GridEnv(25, 6)
     gamma = 0.95
     trace_decay = 0.9
     S = np.arange(env.grid_shape[0]*env.grid_shape[1])
@@ -185,7 +183,7 @@ def main():
     alpha = 0.1e-2  # learning rate
     epsilon = 0.1  # probability of random action
     model = SarsaLambda(env, S, A, gamma, Q, alpha, trace_decay, epsilon)
-    k = 200
+    k = 10000
     num_games = 1
     # for games in range(num_games):  
     #     s =  
