@@ -38,7 +38,7 @@ class GridEnv(gym.Env):
         self.origin = np.array((2,0))
         self.destination = np.array((23,18))
         self.chargers = np.array([(6,6),(9,8),(11,9),(16,13),(20,16),(11,5),(13,7),(16,10)])
-        self.wait_time = np.array([20, 30, 25, 20, 60, 20, 30, 20])
+        self.wait_time = np.array([100, 100, 105, 100, 100, 20, 30, 20])
         self.current_position = self.origin.copy()
         self.path = []
         self.path.append(self.current_position.copy())
@@ -175,7 +175,7 @@ class SarsaLambda:
 
     def simulate(self, k, continue_learning = False, filename = None):
         if continue_learning:
-            self.Q = self.load(filename)
+            self.load(filename)
         # Iteration over episodes
         for i in range(k):
             episode_reward = 0.0
@@ -213,11 +213,11 @@ def main():
     S = np.arange(env.grid_shape[0]*env.grid_shape[1])
     A = np.arange(env.action_space.n)
     Q = np.zeros((len(S), len(A)))
-    alpha = 0.7e-2 # learning rate
+    alpha = 0.5e-2 # learning rate
     epsilon = 0.1  # probability of random action
     model = SarsaLambda(env, S, A, gamma, Q, alpha, trace_decay, epsilon)
     k = 150000
-    continue_learning = False
+    continue_learning = True
     filename = "Q_vector"
     model.simulate(k, continue_learning, filename)
     # img = env.render()
