@@ -14,11 +14,12 @@ class GridEnv(gym.Env):
         # self.chargers = np.array(self._initialize_map_with_charging_stations(number_of_stations))
         # self.origin = np.random.randint(self.grid_size, size=2)
         # self.destination = np.random.randint(self.grid_size, size=2)
-        self.origin = np.array((0, 0))
+        self.origin = np.array((2, 0))
         self.destination = np.array((23, 18))
         self.grid_shape = self.observation_space.shape[0:2]
         self.path = []
         self.visited_states = []
+        self.visited_chargers = []
         self.total_time = 0
         self.s = self.linearize_coord(self.origin.copy())
 
@@ -37,11 +38,12 @@ class GridEnv(gym.Env):
         self.origin = np.array((2,0))
         self.destination = np.array((23,18))
         self.chargers = np.array([(6,6),(9,8),(11,9),(16,13),(20,16),(11,5),(13,7),(16,10)])
-        self.wait_time = np.array([20, 30, 40, 40, 60, 10, 10, 10])
+        self.wait_time = np.array([20, 30, 25, 20, 60, 20, 30, 20])
         self.current_position = self.origin.copy()
         self.path = []
         self.path.append(self.current_position.copy())
         self.visited_states = []
+        self.visited_chargers = []
         self.SOC = 100
         self.total_time = 0
         self.s = self.linearize_coord(self.current_position.copy())
@@ -64,32 +66,34 @@ class GridEnv(gym.Env):
         # append visited states
         self.visited_states.append(self.s)
 
-        # max out the SOC if charger is encounterd and delete that charger from the list of chargers
-        if np.any(np.all(self.chargers == self.current_position, axis=1)):
-            if self.SOC < 20:
-                self.SOC = 100
-                mask = np.any(self.chargers != self.current_position.copy(), axis=1)
-                self.chargers = self.chargers[mask]
-                index = np.where(np.all(self.chargers == self.current_position, axis=1))[0]
-                self.total_time = self.total_time - 1 + self.wait_time[index]
-            # print("Chargers: ",self.chargers)
-
         # calculate the reward
         reward = self._get_reward()
+
+        # max out the SOC if charger is encounterd and delete that charger from the list of chargers
+        if np.any(np.all(self.chargers == self.current_position, axis=1)):
+            # print(self.chargers, self.current_position)
+            if self.SOC < 20:
+                self.SOC = 100
+                index = np.where(np.all(self.chargers == self.current_position, axis=1))[0]
+                self.total_time = self.total_time - 1 + self.wait_time[int(index)]
+                mask = np.any(self.chargers != self.current_position.copy(), axis=1)
+                self.chargers = self.chargers[mask]
+                self.visited_chargers.append(self.current_position.copy())
+            # print("Chargers: ",self.chargers)
 
         # if reached the destination
         reached = self.current_position[0] == self.destination[0] and self.current_position[1] == self.destination[1]
         self.path.append(self.current_position.copy())
 
         # decrease the SOC
-        self.SOC -= 1
+        self.SOC -= 4
         battery_over = self.SOC < 0
-        if battery_over:
-            reward = reward - 100
+        # if battery_over:
+        #     reward = reward - 100
 
         done = reached or battery_over
 
-        return self.s, reward, self.total_time, done
+        return self.s, reward, self.total_time, self.SOC, done
 
     def render(self, mode='rgb_array'):
         img = np.zeros((self.grid_size, self.grid_size, 3), dtype=np.uint8)
@@ -99,6 +103,10 @@ class GridEnv(gym.Env):
 
         for position in self.chargers:
             img[position[0], position[1], :] = [255,0,0]
+
+        for position in self.visited_chargers:
+            img[position[0], position[1], :] = [255,0,255]
+
         img[self.origin[0], self.origin[1], :] = [0, 0, 255]  # origin is red
         # img[self.current_position[0], self.current_position[1], :] = [0, 0, 255]  # current position is blue
         img[self.destination[0], self.destination[1], :] = [0, 255, 0]  # destination is green
@@ -116,15 +124,16 @@ class GridEnv(gym.Env):
 
     def _get_reward(self):
         if self.current_position[0] == self.destination[0] and self.current_position[1] == self.destination[1]:
-            return 1000.0
-        elif self.linearize_coord(self.current_position) in self.visited_states:
-            return -10
+            return 10000.0
         elif np.any(np.all(self.chargers == self.current_position, axis=1)):
             if self.SOC < 20:
                 index = np.where(np.all(self.chargers == self.current_position, axis=1))[0]
-                return -self.wait_time[index]
+                reward = int(500 / (self.wait_time[index] + 1))
+                return reward
             else: 
                 return -1
+        elif self.s in self.visited_states:
+            return -200
         else:
             return -1
 
@@ -164,7 +173,9 @@ class SarsaLambda:
         self.last_experience = {'s': s, 'a': a, 'r': r}
         return self
 
-    def simulate(self, k):
+    def simulate(self, k, continue_learning = False, filename = None):
+        if continue_learning:
+            self.Q = self.load(filename)
         # Iteration over episodes
         for i in range(k):
             episode_reward = 0.0
@@ -172,14 +183,28 @@ class SarsaLambda:
             a = self.choose_greedy_action(s)
             done = False
             while not done:
-                s_, r, total_time, done = self.env.step(a)
+                s_, r, total_time, soc, done = self.env.step(a)
                 a_ = self.choose_greedy_action(s_)
                 self.update(s,a,r,s_)
                 s = s_
                 a = a_
                 episode_reward += r
-            print(f"Episode {i + 1} completed with reward {episode_reward} and total time {total_time}")
+            print(f"Episode {i + 1} completed with reward {episode_reward} with SOC {soc} and total time {total_time}")
+            if i % (k/20) == 0:
+                img = self.env.render()
+                cv2.imwrite(f"image_{i}.tiff", img)
+        
+        self.save(filename)
+    
+    def load(self,filename=None):
+        if filename:
+            print("file found")
+            self.Q = np.load(filename+'.npy')
 
+    def save(self, filename):
+        with open(filename+'.npy', 'wb') as f:
+            np.save(f, self.Q)
+            print("file saved")
 
 def main():
     env = GridEnv(25, 6)
@@ -188,16 +213,15 @@ def main():
     S = np.arange(env.grid_shape[0]*env.grid_shape[1])
     A = np.arange(env.action_space.n)
     Q = np.zeros((len(S), len(A)))
-    alpha = 0.1e-2  # learning rate
+    alpha = 0.7e-2 # learning rate
     epsilon = 0.1  # probability of random action
     model = SarsaLambda(env, S, A, gamma, Q, alpha, trace_decay, epsilon)
-    k = 10000
-    num_games = 1
-    # for games in range(num_games):  
-    #     s =  
-    model.simulate(k)
-    img = env.render()
-    cv2.imwrite("image.tiff", img)
+    k = 150000
+    continue_learning = False
+    filename = "Q_vector"
+    model.simulate(k, continue_learning, filename)
+    # img = env.render()
+    # cv2.imwrite("image.tiff", img)
     # cv2.imshow("image.tiff",img)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
