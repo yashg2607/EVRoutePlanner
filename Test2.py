@@ -86,7 +86,7 @@ class GridEnv(gym.Env):
         self.path.append(self.current_position.copy())
 
         # decrease the SOC
-        self.SOC -= 4
+        self.SOC -= 6
         battery_over = self.SOC < 0
         # if battery_over:
         #     reward = reward - 100
