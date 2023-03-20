@@ -37,8 +37,8 @@ class GridEnv(gym.Env):
         # self.destination = np.random.randint(self.grid_size, size=2)
         self.origin = np.array((2,0))
         self.destination = np.array((23,18))
-        self.chargers = np.array([(6,6),(9,8),(11,9),(16,13),(20,16),(11,5),(13,7),(16,10)])
-        self.wait_time = np.array([20, 25, 25, 30, 25, 25, 30, 20])
+        self.chargers = np.array([(6,6),(9,8),(11,9),(16,13),(20,16),(11,5),(13,7),(16,10),(2, 14),(8, 15),(12, 22)])
+        self.wait_time = np.array([20, 25, 25, 30, 25, 25, 30, 20, 25, 35, 30])
         self.current_position = self.origin.copy()
         self.path = []
         self.path.append(self.current_position.copy())
