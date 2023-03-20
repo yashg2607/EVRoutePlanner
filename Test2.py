@@ -217,7 +217,7 @@ def main():
     epsilon = 0.1  # probability of random action
     model = SarsaLambda(env, S, A, gamma, Q, alpha, trace_decay, epsilon)
     k = 150000
-    continue_learning = True
+    continue_learning = False
     filename = "Q_vector"
     model.simulate(k, continue_learning, filename)
     # img = env.render()
