@@ -38,7 +38,7 @@ class GridEnv(gym.Env):
         self.origin = np.array((2,0))
         self.destination = np.array((23,18))
         self.chargers = np.array([(6,6),(9,8),(11,9),(16,13),(20,16),(11,5),(13,7),(16,10),(2, 14),(8, 15),(12, 22)])
-        self.wait_time = np.array([20, 25, 25, 30, 25, 25, 30, 20, 25, 35, 30])
+        self.wait_time = np.array([200, 200, 200, 200, 200, 25, 30, 20, 25, 35, 30])
         self.current_position = self.origin.copy()
         self.path = []
         self.path.append(self.current_position.copy())
@@ -72,7 +72,7 @@ class GridEnv(gym.Env):
         # max out the SOC if charger is encounterd and delete that charger from the list of chargers
         if np.any(np.all(self.chargers == self.current_position, axis=1)):
             # print(self.chargers, self.current_position)
-            if self.SOC < 20:
+            if self.SOC < 10:
                 self.SOC = 100
                 index = np.where(np.all(self.chargers == self.current_position, axis=1))[0]
                 self.total_time = self.total_time - 1 + self.wait_time[int(index)]
@@ -214,7 +214,7 @@ def main():
     A = np.arange(env.action_space.n)
     Q = np.zeros((len(S), len(A)))
     alpha = 0.5e-2 # learning rate
-    epsilon = 0.1  # probability of random action
+    epsilon = 0.15  # probability of random action
     model = SarsaLambda(env, S, A, gamma, Q, alpha, trace_decay, epsilon)
     k = 150000
     continue_learning = False
