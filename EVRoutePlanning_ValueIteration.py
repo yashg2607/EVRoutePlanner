@@ -5,12 +5,14 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
 
 '''
-Below class creates an environment/map with each node as a charging station or just a freeway/road.
-Details for later additions to the class to be explained soon!!
-
+Below class allows the user to create an environment/map with each node as a charging station 
+or just a freeway/road. Once the map is initialized, the user can provide an origin-destination 
+pair and get the optimized route for their electric vehicle specifications. This EV Route Planner 
+also takes into account the uncertainty around wait times encountered at various charging stations 
+at different times of the day. To model this decision making under uncertainty this class uses 
+the value iteration approach to generate an optimal solution/policy/route.
 '''
 
 class EVRoutePlanning_ValueIteration:
@@ -53,6 +55,7 @@ class EVRoutePlanning_ValueIteration:
         
         return map, charging_stations
     
+    
     def generate_wait_time_distribution_per_charger(self, prob_peak_hour, list_sd_hours, list_peak_wait_time, prob_peak_wait_time):
         '''prob_peak_hour is a list of size 24 with probability values such that peak time(hour) 
         of the day for a charger occurs at hour "i" i.e., P(peak_hour == i) = prob_peak_hour[i]
@@ -91,6 +94,7 @@ class EVRoutePlanning_ValueIteration:
                 key = str(charger_index) + ',' + str(hour[0])
                 self.charging_wait_times[key] = wait_time
         return
+    
 
     def create_journey(self, origin, destination, start_time, start_soc = 0.85, desired_soc = 0.5, vehicle_range = 220):
         '''This function allows us to create a journey for an origin-destination pair. 
@@ -165,6 +169,7 @@ class EVRoutePlanning_ValueIteration:
 
         return
     
+    
     def _initialize_value_function(self, discount_factor = 0.8):
         self.value_function = np.copy(self.position_reward) # initialize value function as position rewards
         num_iterations = 2 * int(1/(1 - discount_factor))
@@ -178,6 +183,7 @@ class EVRoutePlanning_ValueIteration:
                     self.value_function[i][j] = max_action_value_function
 
         return
+    
 
     def _transition_model(self, current_state, action):
         '''current_state is in the form of (x_cur, y_cur, time_cur, soc_cur) and it returns 
@@ -231,6 +237,7 @@ class EVRoutePlanning_ValueIteration:
 
         return final_state, hit_the_wall
     
+    
     def _reward_for_state(self, state):
         x, y, time, soc = state
 
@@ -253,6 +260,7 @@ class EVRoutePlanning_ValueIteration:
         # To-Do: Think more about the function or time reward
 
         return soc_reward + time_reward
+    
     
     def _find_best_action(self, current_state, discount_factor, initializing_value_function = False):
         '''Returns the best action to take for the current state after calculating the values 
@@ -279,6 +287,7 @@ class EVRoutePlanning_ValueIteration:
         next_state = list_next_state[best_action]
         
         return best_action, max_action_value_function, next_state
+    
     
     def value_iteration(self, num_iterations = 5, discount_factor = 0.9):
         # Initialize value function
@@ -314,5 +323,6 @@ class EVRoutePlanning_ValueIteration:
                     break
 
         return x_route, y_route
+    
 
 # Please refer to the Jupyter Notebook file in the repo to understand how to use this class and all the functions within it.
